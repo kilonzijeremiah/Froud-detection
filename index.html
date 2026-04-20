@@ -1,0 +1,45 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fraud Detection Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="page">
+    <div class="card">
+        <h1>💳 Fraud Detection</h1>
+        <p class="subtitle">Analyze transaction risk in real-time</p>
+
+        <form action="/predict" method="post">
+            <div class="input-group">
+                <label>Transaction Amount</label>
+                <input type="number" step="0.01" name="amount" required>
+            </div>
+
+            <div class="input-group">
+                <label>Transaction Time</label>
+                <input type="number" step="0.01" name="time" required>
+            </div>
+
+            <button type="submit">Analyze Transaction</button>
+        </form>
+
+        {% if result %}
+        <div class="result-box {% if 'Fraudulent' in result %}fraud{% else %}safe{% endif %}">
+            <h2>{{ result }}</h2>
+
+            <div class="progress-container">
+                <div class="progress-bar" style="width: {{ probability }}%;"></div>
+            </div>
+
+            <p class="probability">Fraud Risk: {{ probability }}%</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>
