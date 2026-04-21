@@ -1,0 +1,7 @@
+import pickle
+
+# Ensure 'model' is your variable name for the trained ML model
+with open("model.pkl", "wb") as f:
+    pickle.dump(model, f)
+
+print("Check completed: model.pkl is now saved as a binary file.")
