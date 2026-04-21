@@ -5,61 +5,70 @@ from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from pathlib import Path
 
-# --- 1. Initialize App ---
+# --- 1. INITIALIZE APP ---
 app = FastAPI(title="Fraud Detection API")
 
-# --- 2. Smart Model Loading ---
+# --- 2. SMART PATH LOGIC ---
 BASE_DIR = Path(__file__).resolve().parent
-
-# This list checks common naming variations to prevent "File Not Found" errors
-possible_paths = [
-    BASE_DIR / "model.pkl",
-    BASE_DIR / "Model.pkl",
-    BASE_DIR / "model" / "model.pkl"
-]
 
 model = None
 
 @app.on_event("startup")
 def load_model():
     global model
-    for path in possible_paths:
-        if path.exists():
-            try:
-                with open(path, "rb") as f:
-                    model = pickle.load(f)
-                print(f"✅ SUCCESS: Model loaded from {path}")
-                return # Exit once found
-            except Exception as e:
-                print(f"❌ Error loading {path}: {e}")
     
-    print(f"❌ CRITICAL: No model file found in any expected location.")
+    # --- 🔍 DEBUG BLOCK: This will tell us EXACTLY what files are on Render ---
+    print("--- START DEBUG: FILE LISTING ---")
+    file_found = False
+    for root, dirs, files in os.walk(BASE_DIR):
+        # Skip hidden git folders
+        if ".git" in root: continue 
+        for file in files:
+            full_path = os.path.join(root, file)
+            print(f"📄 Found file: {full_path}")
+            # If we find a pkl file, try to load it regardless of name
+            if file.lower().endswith(".pkl"):
+                file_found = True
+                try:
+                    with open(full_path, "rb") as f:
+                        model = pickle.load(f)
+                    print(f"✅ SUCCESS: Loaded model from {full_path}")
+                except Exception as e:
+                    print(f"❌ Error loading {full_path}: {e}")
+    
+    if not file_found:
+        print("❌ CRITICAL ERROR: No .pkl file found anywhere in the project!")
+    print("--- END DEBUG: FILE LISTING ---")
 
-# --- 3. Routes ---
+# --- 3. UI & ROUTES ---
 
 @app.get("/", response_class=HTMLResponse)
 def home():
     return """
     <html>
         <head>
-            <title>Fraud Detection</title>
+            <title>Fraud Detection System</title>
             <style>
-                body { font-family: sans-serif; margin: 50px; background-color: #f8f9fa; text-align: center; }
-                .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; text-align: left; }
-                input { display: block; width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-                input[type="submit"] { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
-                input[type="submit"]:hover { background-color: #218838; }
+                body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                .card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+                h2 { color: #1c1e21; text-align: center; margin-bottom: 1.5rem; }
+                label { font-weight: 600; color: #4b4f56; display: block; margin-bottom: 5px; }
+                input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #dddfe2; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+                input[type="submit"] { background-color: #1877f2; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+                input[type="submit"]:hover { background-color: #166fe5; }
             </style>
         </head>
         <body>
             <div class="card">
-                <h2>🛡️ Fraud Detection System</h2>
+                <h2>🛡️ Fraud Detector</h2>
                 <form action="/predict" method="post">
                     <label>Transaction Amount ($):</label>
-                    <input type="number" step="0.01" name="amount" required>
-                    <label>Seconds Since First Transaction:</label>
-                    <input type="number" name="time" required>
-                    <input type="submit" value="Verify Transaction">
+                    <input type="number" step="0.01" name="amount" required placeholder="e.g. 150.50">
+                    
+                    <label>Time (Seconds):</label>
+                    <input type="number" name="time" required placeholder="e.g. 3600">
+                    
+                    <input type="submit" value="Analyze Transaction">
                 </form>
             </div>
         </body>
@@ -69,34 +78,32 @@ def home():
 @app.post("/predict", response_class=HTMLResponse)
 def predict(amount: float = Form(...), time: float = Form(...)):
     if model is None:
-        return "<h3 style='color:red;'>Error: Model not found. Check server logs for file path errors.</h3>"
+        return "<h3 style='color:red; text-align:center;'>Error: Model not loaded. Check Render logs.</h3>"
 
     try:
-        # Standard 30-feature shape (Time, V1...V28, Amount)
-        features = np.zeros(30)
-        features[0] = time
-        features[-1] = amount
-        input_data = features.reshape(1, -1)
-
-        prediction = model.predict(input_data)[0]
+        # Prepare 30 features: [Time, V1...V28, Amount]
+        data = np.zeros(30)
+        data[0] = time
+        data[-1] = amount
+        prediction = model.predict(data.reshape(1, -1))[0]
         
         try:
-            prob = model.predict_proba(input_data)[0][1]
-            probability = f"{round(prob * 100, 2)}%"
+            prob = model.predict_proba(data.reshape(1, -1))[0][1]
+            score = f"{round(prob * 100, 2)}%"
         except:
-            probability = "N/A"
+            score = "N/A"
 
-        result_text = "🚨 FRAUD DETECTED" if prediction == 1 else "✅ TRANSACTION SAFE"
-        result_color = "red" if prediction == 1 else "green"
+        res_color = "#d93025" if prediction == 1 else "#188038"
+        res_text = "🚨 FRAUD ALERT" if prediction == 1 else "✅ TRANSACTION SAFE"
 
         return f"""
-        <div style="font-family: sans-serif; margin: 50px; text-align: center;">
-            <h2 style="color: {result_color};">{result_text}</h2>
-            <p>Probability: {probability}</p>
-            <p>Amount: ${amount}</p>
+        <div style="font-family: sans-serif; text-align: center; margin-top: 100px;">
+            <h1 style="color: {res_color};">{res_text}</h1>
+            <p style="font-size: 1.2rem;">Fraud Probability: <strong>{score}</strong></p>
+            <p>Amount: ${amount:,.2f} | Time: {time}s</p>
             <br>
-            <a href="/">← Go Back</a>
+            <a href="/" style="color: #1877f2; text-decoration: none; font-weight: bold;">← Try Another</a>
         </div>
         """
     except Exception as e:
-        return f"<h3>Processing Error: {e}</h3>"
+        return f"<p style='color:red;'>Prediction Error: {str(e)}</p>"
