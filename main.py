@@ -11,7 +11,7 @@ app = FastAPI(title="Fraud Detection API")
 # 2. Robust Model Loading
 # This finds the absolute path of the model folder relative to this script
 BASE_DIR = Path(__file__).resolve().parent
-MODEL_PATH = BASE_DIR / "model" / "model.pkl"
+MODEL_PATH = BASE_DIR / "model.pkl"
 
 model = None
 
