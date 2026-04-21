@@ -31,7 +31,12 @@ def load_model():
                 file_found = True
                 try:
                     with open(full_path, "rb") as f:
-                        model = pickle.load(f)
+                        loaded_data = pickle.load(f)
+# If the pickle file contains a list, grab the first item
+if isinstance(loaded_data, list):
+    model = loaded_data[0]
+else:
+    model = loaded_data
                     print(f"✅ SUCCESS: Loaded model from {full_path}")
                 except Exception as e:
                     print(f"❌ Error loading {full_path}: {e}")
