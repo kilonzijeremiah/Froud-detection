@@ -1,7 +1,0 @@
-import pickle
-
-# This saves the 'model' variable to a file named model.pkl
-with open("model.pkl", "wb") as f:
-    pickle.dump(model, f)
-
-print("File 'model.pkl' has been created successfully!")
