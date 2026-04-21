@@ -1,16 +1,4 @@
 import pickle
-import os
-
-# 1. Ensure 'model' is your trained object. 
-# If 'model' is a list, we take the first item.
-model_to_save = model[0] if isinstance(model, list) else model
-
-# 2. Save with 'wb' (Write Binary)
+# Save the actual model object
 with open("model.pkl", "wb") as f:
-    pickle.dump(model_to_save, f)
-
-# 3. Check the size. It should be > 1KB.
-size = os.path.getsize("model.pkl")
-print(f"✅ Success! File size: {size} bytes")
-if size < 1000:
-    print("❌ Warning: File is too small. It might be empty or a text pointer.")
+    pickle.dump(model, f)
