@@ -13,7 +13,7 @@ model = None
 def load_model():
     global model
     # We are looking for exactly 'model.pkl' in the main folder
-    model_path = BASE_DIR / "model.pkl"
+    model_path = BASE_DIR / "model(1).pkl"
     
     print(f"🔍 DEBUG: Looking for model at {model_path}")
     
